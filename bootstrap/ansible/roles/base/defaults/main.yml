@@ -1,0 +1,13 @@
+---
+base_packages:
+  - ca-certificates
+  - curl
+  - python3
+
+base_kernel_modules:
+  - overlay
+  - br_netfilter
+
+base_sysctl_settings:
+  net.bridge.bridge-nf-call-iptables: "1"
+  net.ipv4.ip_forward: "1"

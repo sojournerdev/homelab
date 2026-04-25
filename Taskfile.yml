@@ -1,0 +1,24 @@
+version: "3"
+
+vars:
+  ANSIBLE_DIR: bootstrap/ansible
+  INVENTORY: inventory/homelab.yml
+
+tasks:
+  bootstrap:ping:
+    desc: Check SSH connectivity to the homelab node with Ansible
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible homelab -i "{{.INVENTORY}}" -m ping
+
+  bootstrap:prep:
+    desc: Prepare server node for K3s
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook -i "{{.INVENTORY}}" playbooks/prep.yml --ask-become-pass
+
+  bootstrap:check:
+    desc: Run Ansible syntax checks
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook -i "{{.INVENTORY}}" playbooks/prep.yml --syntax-check

@@ -1,0 +1,48 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+    update_cache: true # Refresh package metadata before installing.
+    cache_valid_time: 3600 # Reuse apt metadata for one hour to keep reruns quick.
+
+- name: Persist Kubernetes kernel modules across reboots
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k3s.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {% for module in base_kernel_modules %}
+      {{ module }}
+      {% endfor %}
+
+- name: Load Kubernetes kernel modules for the current boot
+  ansible.builtin.command:
+    cmd: "modprobe {{ item }}"
+  loop: "{{ base_kernel_modules }}"
+  changed_when: false
+
+- name: Persist Kubernetes sysctl settings across reboots
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-k3s.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {% for key, value in base_sysctl_settings.items() %}
+      {{ key }} = {{ value }}
+      {% endfor %}
+
+- name: Read current Kubernetes sysctl settings
+  ansible.builtin.command:
+    cmd: "sysctl -n {{ item.key }}"
+  loop: "{{ base_sysctl_settings | dict2items }}"
+  changed_when: false
+  register: base_current_sysctl_settings
+
+- name: Apply Kubernetes sysctl settings for the current boot
+  ansible.builtin.command:
+    cmd: "sysctl -w {{ item.item.key }}={{ item.item.value }}"
+  loop: "{{ base_current_sysctl_settings.results }}"
+  when: item.stdout != item.item.value
