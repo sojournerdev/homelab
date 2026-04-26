@@ -1,0 +1,9 @@
+---
+node-name: "{{ k3s_node_name }}"
+write-kubeconfig-mode: "{{ k3s_write_kubeconfig_mode }}"
+{% if k3s_disable_components | length > 0 %}
+disable:
+{% for component in k3s_disable_components %}
+  - {{ component }}
+{% endfor %}
+{% endif %}

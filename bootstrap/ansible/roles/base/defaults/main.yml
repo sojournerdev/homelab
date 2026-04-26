@@ -4,6 +4,8 @@ base_packages:
   - curl
   - python3
 
+base_disable_ufw: true
+
 base_kernel_modules:
   - overlay
   - br_netfilter
