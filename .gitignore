@@ -26,6 +26,9 @@ ansible.log
 *.local.yml
 *.local.yaml
 *.local
+kubeconfig
+*.kubeconfig
+.kube/
 .env
 .env.*
 !.env.example

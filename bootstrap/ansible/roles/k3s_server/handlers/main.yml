@@ -1,6 +1,6 @@
 ---
-- name: Restart k3s
+- name: Restart K3s service
   ansible.builtin.systemd:
     name: k3s
     state: restarted
-  when: k3s_binary.stat.exists | default(false)
+  when: not (k3s_needs_install | default(false) | bool)
