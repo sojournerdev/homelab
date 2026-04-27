@@ -4,6 +4,10 @@ vars:
   ANSIBLE_DIR: bootstrap/ansible
   INVENTORY: inventory/homelab.yml
   ANSIBLE_PLAYBOOK: ansible-playbook -i "{{.INVENTORY}}"
+  KUBECONFIG_DIR: $HOME/.kube/tinycloud
+  KUBECONFIG_LOCAL: "{{.KUBECONFIG_DIR}}/config"
+  KUBECONFIG_CLUSTER: default
+  K3S_SERVER_URL: https://zion:6443
 
 tasks:
   bootstrap:
@@ -47,3 +51,19 @@ tasks:
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - "{{.ANSIBLE_PLAYBOOK}} playbooks/site.yml --syntax-check"
+
+  kubeconfig:fetch:
+    desc: Fetch the K3s kubeconfig for local kubectl access
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - mkdir -p "{{.KUBECONFIG_DIR}}"
+      - chmod 700 "{{.KUBECONFIG_DIR}}"
+      - ansible k3s_servers -i "{{.INVENTORY}}" -b -m fetch -a "src=/etc/rancher/k3s/k3s.yaml dest={{.KUBECONFIG_LOCAL}} flat=true" --ask-become-pass
+      - kubectl config set-cluster "{{.KUBECONFIG_CLUSTER}}" --server="{{.K3S_SERVER_URL}}" --kubeconfig="{{.KUBECONFIG_LOCAL}}"
+      - chmod 600 "{{.KUBECONFIG_LOCAL}}"
+      - KUBECONFIG="{{.KUBECONFIG_LOCAL}}" kubectl config view --minify
+
+  kubeconfig:status:
+    desc: Verify local kubectl access using the fetched K3s kubeconfig
+    cmds:
+      - KUBECONFIG="{{.KUBECONFIG_LOCAL}}" kubectl get nodes -o wide
