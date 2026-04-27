@@ -1,0 +1,63 @@
+---
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Check whether K3s is installed
+  ansible.builtin.stat:
+    path: "{{ k3s_binary_path }}"
+  register: k3s_binary
+
+- name: Render K3s config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ k3s_config_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart k3s
+
+- name: Download K3s install script when missing
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: "{{ k3s_install_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+  when: not k3s_binary.stat.exists
+
+- name: Install missing K3s server
+  ansible.builtin.command:
+    cmd: "{{ k3s_install_script_path }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: "{{ k3s_install_exec }}"
+  when: not k3s_binary.stat.exists
+
+- name: Remove temporary K3s install script
+  ansible.builtin.file:
+    path: "{{ k3s_install_script_path }}"
+    state: absent
+  when: not k3s_binary.stat.exists
+
+- name: Ensure K3s service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s
+    enabled: true
+    state: started
+
+- name: Apply pending K3s config restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify K3s node health
+  ansible.builtin.command:
+    cmd: "{{ k3s_status_command }}"
+  register: k3s_node_health
+  retries: 12
+  delay: 10
+  until: k3s_node_health.rc == 0
+  changed_when: false

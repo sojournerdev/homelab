@@ -6,6 +6,21 @@
     update_cache: true # Refresh package metadata before installing.
     cache_valid_time: 3600 # Reuse apt metadata for one hour to keep reruns quick.
 
+- name: Check whether UFW is active
+  ansible.builtin.command:
+    cmd: ufw status
+  register: base_ufw_status
+  changed_when: false
+  failed_when: false
+
+- name: Disable active UFW for Kubernetes networking
+  ansible.builtin.command:
+    cmd: ufw disable
+  when:
+    - base_disable_ufw
+    - base_ufw_status.rc == 0
+    - "'Status: active' in base_ufw_status.stdout"
+
 - name: Persist Kubernetes kernel modules across reboots
   ansible.builtin.copy:
     dest: /etc/modules-load.d/k3s.conf
@@ -17,7 +32,7 @@
       {{ module }}
       {% endfor %}
 
-- name: Load Kubernetes kernel modules for the current boot
+- name: Load Kubernetes kernel modules for current boot
   ansible.builtin.command:
     cmd: "modprobe {{ item }}"
   loop: "{{ base_kernel_modules }}"
@@ -41,7 +56,7 @@
   changed_when: false
   register: base_current_sysctl_settings
 
-- name: Apply Kubernetes sysctl settings for the current boot
+- name: Apply changed Kubernetes sysctl settings for current boot
   ansible.builtin.command:
     cmd: "sysctl -w {{ item.item.key }}={{ item.item.value }}"
   loop: "{{ base_current_sysctl_settings.results }}"

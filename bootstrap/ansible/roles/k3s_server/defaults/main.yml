@@ -1,0 +1,16 @@
+---
+k3s_version: v1.35.3+k3s1
+k3s_install_exec: server
+k3s_install_script_url: https://get.k3s.io
+
+k3s_config_dir: /etc/rancher/k3s
+k3s_config_file: "{{ k3s_config_dir }}/config.yaml"
+k3s_install_script_path: "{{ k3s_config_dir }}/install.sh"
+
+k3s_binary_path: /usr/local/bin/k3s
+k3s_status_command: "{{ k3s_binary_path }} kubectl get nodes -o wide"
+k3s_node_name: "{{ inventory_hostname }}"
+k3s_write_kubeconfig_mode: "0600"
+
+k3s_disable_components:
+  - servicelb
