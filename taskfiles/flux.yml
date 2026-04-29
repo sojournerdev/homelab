@@ -1,0 +1,47 @@
+version: "3"
+
+tasks:
+  flux:login:
+    desc: Log in to GitHub CLI for Flux bootstrap
+    cmds:
+      - task: tools:gh
+      - >-
+        "{{.TOOLS_BIN}}/gh" auth status ||
+        "{{.TOOLS_BIN}}/gh" auth login --web --git-protocol ssh
+
+  flux:check:
+    desc: Verify Flux prerequisites
+    env:
+      KUBECONFIG: "{{.KUBECONFIG_LOCAL}}"
+    cmds:
+      - task: tools:flux
+      - task: kubeconfig:status
+      - >-
+        "{{.TOOLS_BIN}}/flux" check --pre
+
+  flux:bootstrap:
+    desc: Bootstrap Flux into the tinycloud cluster
+    env:
+      KUBECONFIG: "{{.KUBECONFIG_LOCAL}}"
+    cmds:
+      - task: flux:check
+      - task: flux:login
+      - |
+        GITHUB_TOKEN="$("{{.TOOLS_BIN}}/gh" auth token)"
+        export GITHUB_TOKEN
+        "{{.TOOLS_BIN}}/flux" bootstrap github \
+          --owner="{{.FLUX_GITHUB_OWNER}}" \
+          --repository="{{.FLUX_GITHUB_REPOSITORY}}" \
+          --branch="{{.FLUX_GITHUB_BRANCH}}" \
+          --path="{{.FLUX_CLUSTER_PATH}}" \
+          --personal \
+          --token-auth=false
+
+  flux:status:
+    desc: Show Flux reconciliation status
+    env:
+      KUBECONFIG: "{{.KUBECONFIG_LOCAL}}"
+    cmds:
+      - task: flux:check
+      - >-
+        "{{.TOOLS_BIN}}/flux" get all -A

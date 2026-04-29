@@ -5,10 +5,11 @@
 *.swp
 *.swo
 
-# Logs/temp
+# Logs/temp/local dev tools
 *.log
 tmp/
 .cache/
+.tools/
 
 # Python/Ansible local tooling
 __pycache__/

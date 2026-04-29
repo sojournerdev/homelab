@@ -1,0 +1,83 @@
+version: "3"
+
+vars:
+  TOOLS_TMP: "{{.TOOLS_DIR}}/tmp"
+
+tasks:
+  tools:
+    desc: Install repo-local CLI tools
+    deps:
+      - tools:flux
+      - tools:gh
+      - tools:kubectl
+
+  tools:flux:
+    desc: Install Flux CLI into .tools/bin
+    vars:
+      FLUX_ARCHIVE_VERSION: '{{ trimPrefix "v" .FLUX_VERSION }}'
+      FLUX_ARCHIVE: flux_{{.FLUX_ARCHIVE_VERSION}}_darwin_arm64.tar.gz
+      FLUX_URL: https://github.com/fluxcd/flux2/releases/download/{{.FLUX_VERSION}}/{{.FLUX_ARCHIVE}}
+      FLUX_TMP: "{{.TOOLS_TMP}}/flux"
+    cmds:
+      - mkdir -p "{{.TOOLS_BIN}}" "{{.FLUX_TMP}}"
+      - curl -fsSL "{{.FLUX_URL}}" -o "{{.FLUX_TMP}}/{{.FLUX_ARCHIVE}}"
+      - tar -xzf "{{.FLUX_TMP}}/{{.FLUX_ARCHIVE}}" -C "{{.FLUX_TMP}}" flux
+      - install -m 0755 "{{.FLUX_TMP}}/flux" "{{.TOOLS_BIN}}/flux"
+      - rm -rf "{{.FLUX_TMP}}"
+      - rmdir "{{.TOOLS_TMP}}" 2>/dev/null || true
+    status:
+      - test -x "{{.TOOLS_BIN}}/flux"
+      - test "$("{{.TOOLS_BIN}}/flux" --version | awk '{print $3}')" = "{{.FLUX_ARCHIVE_VERSION}}"
+
+  tools:kubectl:
+    desc: Install kubectl into .tools/bin
+    vars:
+      KUBECTL_URL: https://dl.k8s.io/release/{{.KUBECTL_VERSION}}/bin/darwin/arm64/kubectl
+      KUBECTL_TMP: "{{.TOOLS_TMP}}/kubectl"
+    cmds:
+      - mkdir -p "{{.TOOLS_BIN}}" "{{.KUBECTL_TMP}}"
+      - curl -fsSL "{{.KUBECTL_URL}}" -o "{{.KUBECTL_TMP}}/kubectl"
+      - install -m 0755 "{{.KUBECTL_TMP}}/kubectl" "{{.TOOLS_BIN}}/kubectl"
+      - rm -rf "{{.KUBECTL_TMP}}"
+      - rmdir "{{.TOOLS_TMP}}" 2>/dev/null || true
+    status:
+      - test -x "{{.TOOLS_BIN}}/kubectl"
+      - >-
+        test "$("{{.TOOLS_BIN}}/kubectl" version --client=true |
+        awk '/Client Version:/ { print $3 }')" = "{{.KUBECTL_VERSION}}"
+
+  tools:gh:
+    desc: Install GitHub CLI into .tools/bin
+    vars:
+      GH_ARCHIVE_VERSION: '{{ trimPrefix "v" .GH_VERSION }}'
+      GH_ARCHIVE: gh_{{.GH_ARCHIVE_VERSION}}_macOS_arm64.zip
+      GH_URL: https://github.com/cli/cli/releases/download/{{.GH_VERSION}}/{{.GH_ARCHIVE}}
+      GH_TMP: "{{.TOOLS_TMP}}/gh"
+    cmds:
+      - mkdir -p "{{.TOOLS_BIN}}" "{{.GH_TMP}}"
+      - curl -fsSL "{{.GH_URL}}" -o "{{.GH_TMP}}/{{.GH_ARCHIVE}}"
+      - unzip -q "{{.GH_TMP}}/{{.GH_ARCHIVE}}" -d "{{.GH_TMP}}"
+      - install -m 0755 "{{.GH_TMP}}/gh_{{.GH_ARCHIVE_VERSION}}_macOS_arm64/bin/gh" "{{.TOOLS_BIN}}/gh"
+      - rm -rf "{{.GH_TMP}}"
+      - rmdir "{{.TOOLS_TMP}}" 2>/dev/null || true
+    status:
+      - test -x "{{.TOOLS_BIN}}/gh"
+      - test "$("{{.TOOLS_BIN}}/gh" --version | awk '/gh version/ { print $3; exit }')" = "{{.GH_ARCHIVE_VERSION}}"
+
+  tools:status:
+    desc: Show repo-local CLI tool versions
+    deps:
+      - tools
+    cmds:
+      - echo "PATH={{.TOOLS_BIN}}"
+      - >-
+        "{{.TOOLS_BIN}}/flux" --version
+      - >-
+        "{{.TOOLS_BIN}}/gh" --version
+      - >-
+        "{{.TOOLS_BIN}}/kubectl" version --client=true
+
+  tools:clean:
+    desc: Remove repo-local CLI tools
+    cmds:
+      - rm -rf "{{.TOOLS_DIR}}"
