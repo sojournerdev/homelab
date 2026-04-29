@@ -1,0 +1,7 @@
+version: "3"
+
+tasks:
+  lint:
+    desc: Validate Taskfile syntax and conventions
+    cmds:
+      - ruby scripts/lint-taskfiles.rb

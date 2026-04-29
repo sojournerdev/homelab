@@ -1,69 +1,43 @@
 version: "3"
 
+includes:
+  tools:
+    taskfile: ./taskfiles/tools.yml
+    flatten: true
+  bootstrap:
+    taskfile: ./taskfiles/bootstrap.yml
+    flatten: true
+  kubeconfig:
+    taskfile: ./taskfiles/kubeconfig.yml
+    flatten: true
+  flux:
+    taskfile: ./taskfiles/flux.yml
+    flatten: true
+  lint:
+    taskfile: ./taskfiles/lint.yml
+    flatten: true
+
 vars:
+  ROOT_DIR:
+    sh: git rev-parse --show-toplevel
+
   ANSIBLE_DIR: bootstrap/ansible
   INVENTORY: inventory/homelab.yml
   ANSIBLE_PLAYBOOK: ansible-playbook -i "{{.INVENTORY}}"
-  KUBECONFIG_DIR: $HOME/.kube/tinycloud
+
+  TOOLS_DIR: "{{.ROOT_DIR}}/.tools"
+  TOOLS_BIN: "{{.TOOLS_DIR}}/bin"
+  FLUX_VERSION: v2.8.6
+  GH_VERSION: v2.90.0
+
+  KUBECTL_VERSION: v1.35.3
+  KUBECONFIG_DIR:
+    sh: printf '%s/.kube/tinycloud' "$HOME"
   KUBECONFIG_LOCAL: "{{.KUBECONFIG_DIR}}/config"
   KUBECONFIG_CLUSTER: default
   K3S_SERVER_URL: https://zion:6443
 
-tasks:
-  bootstrap:
-    desc: Prepare the Ubuntu Server node and install K3s
-    dir: "{{.ANSIBLE_DIR}}"
-    deps:
-    - bootstrap:ping
-    cmds:
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/site.yml --ask-become-pass"
-
-  bootstrap:ping:
-    desc: Check Ansible connectivity to the homelab node
-    dir: "{{.ANSIBLE_DIR}}"
-    cmds:
-      - ansible homelab -i "{{.INVENTORY}}" -m ping
-
-  bootstrap:prep:
-    desc: Prepare the Ubuntu Server node for K3s
-    dir: "{{.ANSIBLE_DIR}}"
-    deps:
-    - bootstrap:ping
-    cmds:
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/prep.yml --ask-become-pass"
-
-  bootstrap:k3s:
-    desc: Install K3s server
-    dir: "{{.ANSIBLE_DIR}}"
-    deps:
-    - bootstrap:ping
-    cmds:
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/k3s.yml --ask-become-pass"
-
-  bootstrap:status:
-    desc: Verify K3s node health
-    dir: "{{.ANSIBLE_DIR}}"
-    cmds:
-      - ansible k3s_servers -i "{{.INVENTORY}}" -b -m command -a "/usr/local/bin/k3s kubectl get nodes -o wide" --ask-become-pass
-
-  bootstrap:check:
-    desc: Run Ansible syntax checks
-    dir: "{{.ANSIBLE_DIR}}"
-    cmds:
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/site.yml --syntax-check"
-
-  kubeconfig:fetch:
-    desc: Fetch the K3s kubeconfig for local kubectl access
-    dir: "{{.ANSIBLE_DIR}}"
-    cmds:
-      - mkdir -p "{{.KUBECONFIG_DIR}}"
-      - chmod 700 "{{.KUBECONFIG_DIR}}"
-      - ansible k3s_servers -i "{{.INVENTORY}}" -b -m fetch -a "src=/etc/rancher/k3s/k3s.yaml dest={{.KUBECONFIG_LOCAL}} flat=true" --ask-become-pass
-      - kubectl config set-cluster "{{.KUBECONFIG_CLUSTER}}" --server="{{.K3S_SERVER_URL}}" --kubeconfig="{{.KUBECONFIG_LOCAL}}"
-      - chmod 600 "{{.KUBECONFIG_LOCAL}}"
-      - KUBECONFIG="{{.KUBECONFIG_LOCAL}}" kubectl config view --minify
-
-  kubeconfig:status:
-    desc: Verify local kubectl access using the fetched K3s kubeconfig
-    cmds:
-      - KUBECONFIG="{{.KUBECONFIG_LOCAL}}" kubectl get nodes -o wide
+  FLUX_GITHUB_OWNER: sojournerdev
+  FLUX_GITHUB_REPOSITORY: tinycloud
+  FLUX_GITHUB_BRANCH: main
+  FLUX_CLUSTER_PATH: clusters/tinycloud
