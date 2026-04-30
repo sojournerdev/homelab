@@ -6,7 +6,7 @@ tasks:
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - task: bootstrap:ping
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/site.yml --ask-become-pass"
+      - "{{.ANSIBLE_PLAYBOOK}} playbooks/site.yml"
 
   bootstrap:ping:
     desc: Check Ansible connectivity to the homelab node
@@ -19,14 +19,14 @@ tasks:
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - task: bootstrap:ping
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/prep.yml --ask-become-pass"
+      - "{{.ANSIBLE_PLAYBOOK}} playbooks/prep.yml"
 
   bootstrap:k3s:
     desc: Install K3s server
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - task: bootstrap:ping
-      - "{{.ANSIBLE_PLAYBOOK}} playbooks/k3s.yml --ask-become-pass"
+      - "{{.ANSIBLE_PLAYBOOK}} playbooks/k3s.yml"
 
   bootstrap:status:
     desc: Verify K3s node health
@@ -38,7 +38,6 @@ tasks:
         -b
         -m command
         -a "/usr/local/bin/k3s kubectl get nodes -o wide"
-        --ask-become-pass
 
   bootstrap:check:
     desc: Run Ansible syntax checks
