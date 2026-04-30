@@ -27,14 +27,12 @@ ansible.log
 *.local.yml
 *.local.yaml
 *.local
-bootstrap/ansible/inventory/group_vars/**/local.yml
-bootstrap/ansible/inventory/host_vars/**/local.yml
 kubeconfig
 *.kubeconfig
 .kube/
 .env
 .env.*
-!.env.example
+.envrc
 
 # SSH material
 .ssh/
