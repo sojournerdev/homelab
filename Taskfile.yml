@@ -35,7 +35,7 @@ vars:
     sh: printf '%s/.kube/tinycloud' "$HOME"
   KUBECONFIG_LOCAL: "{{.KUBECONFIG_DIR}}/config"
   KUBECONFIG_CLUSTER: default
-  K3S_SERVER_URL: https://zion:6443
+  K3S_SERVER_URL: https://tinycloud:6443
 
   FLUX_GITHUB_OWNER: sojournerdev
   FLUX_GITHUB_REPOSITORY: tinycloud
