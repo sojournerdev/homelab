@@ -1,16 +1,14 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: metallb-config
+  name: infrastructure-sources
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: metallb-controller
   interval: 30m
-  path: ./clusters/tinycloud/infrastructure/configs/metallb
+  path: ./clusters/tinycloud/infrastructure/sources
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   wait: true
-  timeout: 5m
+  timeout: 10m
