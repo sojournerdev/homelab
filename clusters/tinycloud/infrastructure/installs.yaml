@@ -1,14 +1,16 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: infrastructure-sources
+  name: infrastructure-installs
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: infrastructure-sources
   interval: 30m
-  path: ./clusters/tinycloud/infrastructure/sources
+  path: ./clusters/tinycloud/infrastructure/installs
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   wait: true
-  timeout: 5m
+  timeout: 10m
