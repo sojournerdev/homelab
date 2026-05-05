@@ -1,0 +1,96 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: inference-charts
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://vllm-project.github.io/production-stack
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    app.kubernetes.io/part-of: homelab-apps
+    app.kubernetes.io/managed-by: flux
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: inference
+  namespace: inference
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: vllm-stack
+      version: "0.1.12"
+      sourceRef:
+        kind: HelmRepository
+        name: inference-charts
+        namespace: flux-system
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    servingEngineSpec:
+      enableEngine: true
+      sidecar:
+        image: "lmcache/lmstack-sidecar:2025-07-28"
+        imagePullPolicy: IfNotPresent
+      modelSpec:
+        - name: qwen-instruct
+          runtimeClassName: nvidia
+          repository: vllm/vllm-openai
+          tag: "v0.29.0"
+          modelURL: Qwen/Qwen3-4B-AWQ
+          replicaCount: 1
+          requestCPU: 2
+          requestMemory: "4Gi"
+          requestGPU: 1
+          requestGPUType: "nvidia.com/gpu"
+          limitCPU: "4"
+          limitMemory: "8Gi"
+          pvcStorage: "10Gi"
+          pvcAccessMode:
+            - ReadWriteOnce
+          vllmConfig:
+            tensorParallelSize: 1
+            quantization: "awq"
+            maxModelLen: 4096
+            dtype: "float16"
+            gpuMemoryUtilization: 0.80
+            extraArgs:
+              - "--served-model-name"
+              - "qwen3-4b"
+    routerSpec:
+      tag: "v0.1.12"
+      imagePullPolicy: IfNotPresent
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inference-api
+  namespace: inference
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: gateway-system
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: inference-router-service
+          port: 80

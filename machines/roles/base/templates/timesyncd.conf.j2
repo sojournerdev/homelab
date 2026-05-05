@@ -1,0 +1,7 @@
+# Managed by Ansible — do not edit manually
+[Time]
+NTP={{ base_ntp_servers | join(' ') }}
+FallbackNTP=0.pool.ntp.org 1.pool.ntp.org
+RootDistanceMaxSec=5
+PollIntervalMinSec=32
+PollIntervalMaxSec=2048

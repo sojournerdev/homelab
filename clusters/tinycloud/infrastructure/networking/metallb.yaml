@@ -1,0 +1,64 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: networking-charts
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://metallb.github.io/metallb
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+    app.kubernetes.io/part-of: homelab-platform
+    app.kubernetes.io/managed-by: flux
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: load-balancer
+  namespace: metallb-system
+spec:
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      chart: metallb
+      version: 0.15.3
+      sourceRef:
+        kind: HelmRepository
+        name: networking-charts
+        namespace: flux-system
+      interval: 12h
+  install:
+    crds: Skip
+    remediation:
+      retries: 3
+  upgrade:
+    crds: Skip
+    remediation:
+      retries: 3
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: lan-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.240-192.168.1.250
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: lan-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - lan-pool
+---

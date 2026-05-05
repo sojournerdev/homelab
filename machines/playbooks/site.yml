@@ -1,0 +1,19 @@
+---
+- name: Base hardening and firewall
+  hosts: all
+  become: true
+  roles:
+    - role: base
+    - role: firewall
+
+- name: Provision k3s server
+  hosts: cpu_servers
+  become: true
+  roles:
+    - role: k3s_server
+
+- name: Provision GPU nodes
+  hosts: gpu_servers
+  become: true
+  roles:
+    - role: gpu
