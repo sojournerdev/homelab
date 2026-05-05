@@ -38,6 +38,6 @@ vars:
   K3S_SERVER_URL: https://tinycloud:6443
 
   FLUX_GITHUB_OWNER: sojournerdev
-  FLUX_GITHUB_REPOSITORY: tinycloud
+  FLUX_GITHUB_REPOSITORY: homelab
   FLUX_GITHUB_BRANCH: main
   FLUX_CLUSTER_PATH: clusters/tinycloud
