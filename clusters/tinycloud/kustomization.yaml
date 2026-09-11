@@ -3,6 +3,4 @@ kind: Kustomization
 resources:
   - flux-system/gotk-components.yaml
   - flux-system/gotk-sync.yaml
-  - infrastructure/sources.yaml
-  - infrastructure/installs.yaml
-  - infrastructure/configs.yaml
+  - infrastructure.yaml
