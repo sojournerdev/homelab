@@ -1,0 +1,20 @@
+---
+# k3s manages its own iptables — UFW must stay disabled.
+# This role handles host-level security: fail2ban and port documentation.
+firewall_required_ports:
+  tcp:
+    - {port: 22, desc: "SSH"}
+    - {port: 6443, desc: "k3s API server"}
+    - {port: 10250, desc: "kubelet"}
+    - {port: 80, desc: "HTTP via MetalLB/Traefik"}
+    - {port: 443, desc: "HTTPS via MetalLB/Traefik"}
+  udp:
+    - {port: 8472, desc: "flannel VXLAN overlay"}
+  tcp_ranges:
+    - {start: 7946, end: 7946, desc: "MetalLB speaker"}
+    - {start: 30000, end: 32767, desc: "NodePort range"}
+
+firewall_fail2ban_enabled: true
+firewall_fail2ban_maxretry: 5
+firewall_fail2ban_bantime: 3600
+firewall_fail2ban_findtime: 600
