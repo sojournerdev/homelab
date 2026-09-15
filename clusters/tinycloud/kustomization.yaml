@@ -4,4 +4,3 @@ resources:
   - flux-system/gotk-components.yaml
   - flux-system/gotk-sync.yaml
   - infrastructure.yaml
-  - secrets/

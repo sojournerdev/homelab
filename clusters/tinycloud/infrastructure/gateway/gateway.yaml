@@ -8,7 +8,7 @@ spec:
   type: oci
   url: oci://docker.io/envoyproxy/gateway-helm
   secretRef:
-    name: dockerhub-oci
+    name: oci-registry-auth
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
@@ -20,7 +20,7 @@ spec:
   type: oci
   url: oci://docker.io/envoyproxy/gateway-inference-extension-helm
   secretRef:
-    name: dockerhub-oci
+    name: oci-registry-auth
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
