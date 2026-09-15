@@ -5,4 +5,4 @@ A playground for experiments, new tools, and whatever I feel like deploying—al
 
 ## License
 
-This project is licensed under the [MIT LICENSE](LICENSE).
+[LICENSE](LICENSE).

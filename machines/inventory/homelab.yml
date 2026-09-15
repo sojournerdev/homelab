@@ -1,0 +1,22 @@
+---
+all:
+  children:
+    # A host in multiple groups = mixed workloads
+    # (e.g. cpu + gpu on one box).
+    # New compute class (tpu, fpga) = new group here
+    # + matching role in site.yml.
+    cpu_servers:
+      hosts:
+        homelab:
+
+    gpu_servers:
+      hosts:
+        homelab:
+          gpu_count: 1
+          gpu_model: rtx_5060
+
+    # Do not add hosts directly — add to a compute-class group above.
+    heterogeneous_servers:
+      children:
+        cpu_servers:
+        gpu_servers:

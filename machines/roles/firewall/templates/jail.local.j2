@@ -1,0 +1,11 @@
+# Managed by Ansible — do not edit manually
+[DEFAULT]
+bantime  = {{ firewall_fail2ban_bantime }}
+findtime = {{ firewall_fail2ban_findtime }}
+maxretry = {{ firewall_fail2ban_maxretry }}
+
+[sshd]
+enabled = true
+port    = ssh
+filter  = sshd
+logpath = /var/log/auth.log

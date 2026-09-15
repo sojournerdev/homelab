@@ -1,0 +1,97 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: vllm
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://vllm-project.github.io/production-stack
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vllm
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vllm
+  namespace: vllm
+spec:
+  interval: 30m
+  timeout: 15m
+  dependsOn:
+    - name: metallb
+      namespace: metallb-system
+    - name: kube-prometheus-stack
+      namespace: observability
+  chart:
+    spec:
+      chart: vllm-stack
+      version: "0.1.x"
+      sourceRef:
+        kind: HelmRepository
+        name: vllm
+        namespace: flux-system
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    servingEngineSpec:
+      enableEngine: true
+      modelSpec:
+        - name: default
+          repository: vllm/vllm-openai
+          tag: latest
+          modelURL: Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4
+          replicaCount: 1
+          requestCPU: 2
+          requestMemory: "4Gi"
+          requestGPU: 1
+          requestGPUType: "nvidia.com/gpu"
+          limitCPU: "4"
+          limitMemory: "8Gi"
+          pvcStorage: "10Gi"
+          pvcAccessMode:
+            - ReadWriteOnce
+          vllmConfig:
+            tensorParallelSize: 1
+            quantization: "gptq"
+            maxModelLen: 4096
+            dtype: "float16"
+            gpuMemoryUtilization: 0.80
+            extraArgs:
+              - "--served-model-name"
+              - "qwen2.5-7b"
+    kube-prometheus-stack:
+      enabled: false
+    prometheus-adapter:
+      enabled: false
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vllm
+  namespace: vllm
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vllm-stack
+  namespaceSelector:
+    matchNames:
+      - vllm
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

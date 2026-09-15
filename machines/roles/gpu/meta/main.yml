@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: gpu
+  author: homelab
+  description: >
+    Installs NVIDIA container toolkit so k3s auto-detects GPU runtimes.
+    Does not manage containerd config — k3s handles that natively when
+    nvidia-container-toolkit is present. Verifies runtime binary and
+    GPU accessibility after install.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - nvidia
+    - gpu
+    - containerd
+    - kubernetes
+dependencies: []

@@ -1,0 +1,160 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vllm-alerts
+  namespace: vllm
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: vllm
+      rules:
+        # Latency — p99 inference latency exceeds 10s
+        - alert: VLLMHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              rate(vllm:e2e_request_latency_seconds_bucket[5m])
+            ) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "vLLM p99 latency > 10s"
+            description: "{{ $value | humanizeDuration }}"
+
+        # Traffic — no requests for 5m
+        - alert: VLLMTrafficDrop
+          expr: |
+            sum(rate(vllm:num_requests_total[5m])) == 0
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "vLLM receiving no traffic"
+
+        # Errors — error rate exceeds 5%
+        - alert: VLLMHighErrorRate
+          expr: |
+            sum(rate(vllm:num_requests_total{status="error"}[5m]))
+            /
+            sum(rate(vllm:num_requests_total[5m]))
+            > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "vLLM error rate > 5%"
+            description: "{{ $value | humanizePercentage }} of requests failing"
+
+        # Saturation — GPU memory > 90%
+        - alert: VLLMGPUMemoryHigh
+          expr: |
+            DCGM_FI_DEV_GPU_MEM_USED / DCGM_FI_DEV_GPU_MEM_TOTAL > 0.90
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "vLLM GPU memory > 90%"
+
+        # Saturation — queue depth > 10
+        - alert: VLLMQueueBacklog
+          expr: |
+            vllm:num_requests_waiting > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "vLLM request queue backlog: {{ $value }}"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: envoy-alerts
+  namespace: envoy-gateway-system
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: envoy
+      rules:
+        # Errors — 5xx rate exceeds 1%
+        - alert: EnvoyHigh5xxRate
+          expr: |
+            sum(rate(envoy_http_downstream_cx_http_1xx_total[5m]))
+            +
+            sum(rate(envoy_http_downstream_cx_http_2xx_total[5m]))
+            +
+            sum(rate(envoy_http_downstream_cx_http_3xx_total[5m]))
+            +
+            sum(rate(envoy_http_downstream_cx_http_4xx_total[5m]))
+            +
+            sum(rate(envoy_http_downstream_cx_http_5xx_total[5m]))
+            > 0
+            and
+            sum(rate(envoy_http_downstream_cx_http_5xx_total[5m]))
+            /
+            sum(rate(envoy_http_downstream_cx_http_2xx_total[5m]))
+            > 0.01
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Envoy 5xx error rate > 1%"
+
+        # Saturation — active connections > 1000
+        - alert: EnvoyHighConnectionCount
+          expr: |
+            sum(envoy_http_downstream_cx_active) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Envoy active connections: {{ $value }}"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: metallb-alerts
+  namespace: metallb-system
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: metallb
+      rules:
+        # Saturation — IP pool > 80% used
+        - alert: MetalLBIPPoolExhaustion
+          expr: |
+            metallb_allocator_addresses_in_use_total
+            /
+            metallb_allocator_addresses_total
+            > 0.80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MetalLB IP pool > 80% used"
+            description: "{{ $value | humanizePercentage }} of addresses allocated"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: envoy-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kube-prometheus-stack
+  namespace: observability
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus

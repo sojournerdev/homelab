@@ -1,0 +1,8 @@
+---
+gpu_nvidia_container_toolkit_key_url: >-
+  https://nvidia.github.io/libnvidia-container/gpgkey
+gpu_nvidia_container_toolkit_repo: >-
+  deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg]
+  https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /
+
+gpu_nvidia_container_toolkit_package: nvidia-container-toolkit

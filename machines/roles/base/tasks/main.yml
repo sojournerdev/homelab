@@ -1,0 +1,96 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags: base
+
+- name: Persist kernel modules for boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/base.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {% for module in base_kernel_modules %}
+      {{ module }}
+      {% endfor %}
+  tags: base
+
+- name: Load kernel modules for current boot
+  ansible.builtin.command:
+    cmd: "modprobe {{ item }}"
+  loop: "{{ base_kernel_modules }}"
+  changed_when: false
+  tags: base
+
+- name: Apply sysctl settings idempotently
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop: "{{ base_sysctl | dict2items }}"
+  tags: base
+
+- name: Deploy hardened sshd_config
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config.d/99-hardened.conf
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+  tags: base
+
+- name: Deploy timesyncd config for NTP
+  ansible.builtin.template:
+    src: timesyncd.conf.j2
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart timesyncd
+  tags: base
+
+- name: Ensure unattended-upgrades is installed
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+  tags: base
+
+- name: Enable automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+  tags: base
+
+- name: Apply pending base restarts
+  ansible.builtin.meta: flush_handlers
+  tags: base
+
+- name: Verify sshd is running and accepting connections
+  ansible.builtin.command:
+    cmd: ssh -o BatchMode=yes -o ConnectTimeout=3 localhost true
+  register: base_sshd_check
+  changed_when: false
+  failed_when: base_sshd_check.rc != 0 and base_sshd_check.rc != 255
+  tags: base
+
+- name: Verify timesyncd is synchronized
+  ansible.builtin.command:
+    cmd: timedatectl show --property=NTPSynchronized
+  register: base_ntp_sync
+  changed_when: false
+  failed_when: "'yes' not in base_ntp_sync.stdout"
+  tags: base
