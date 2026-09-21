@@ -1,0 +1,139 @@
+---
+- name: Assert required variables are set
+  ansible.builtin.assert:
+    that:
+      - homelab_host is defined and homelab_host != ""
+      - homelab_user is defined and homelab_user != ""
+      - homelab_kubernetes_server is defined and homelab_kubernetes_server != ""
+      - >-
+        workstation_sops_age_recipient is defined and
+        workstation_sops_age_recipient != ""
+    fail_msg: "Missing required variable — check inventory host_vars"
+  tags: [workstation, workstation_verify]
+
+- name: Assert SSH key exists
+  ansible.builtin.stat:
+    path: "{{ workstation_ssh_key_path }}"
+  register: _workstation_ssh_key
+  failed_when: not _workstation_ssh_key.stat.exists
+  tags: [workstation, workstation_verify]
+
+- name: Assert age key exists
+  ansible.builtin.stat:
+    path: "{{ workstation_age_key_path }}"
+  register: _workstation_age_key
+  failed_when: not _workstation_age_key.stat.exists
+  tags: [workstation, workstation_verify]
+
+- name: Install Homebrew packages
+  community.general.homebrew:
+    name: "{{ workstation_brew_packages }}"
+    state: present
+  tags: [workstation, workstation_install]
+
+- name: List installed pipx tools
+  ansible.builtin.command:
+    cmd: pipx list --short
+  register: _workstation_pipx_list
+  changed_when: false
+  tags: [workstation, workstation_install]
+
+- name: Install pipx-managed tools
+  ansible.builtin.command:
+    cmd: "pipx install {{ item }}"
+  loop: "{{ workstation_pipx_packages }}"
+  when: item not in _workstation_pipx_list.stdout
+  register: _workstation_pipx_install
+  changed_when: _workstation_pipx_install.rc == 0
+  tags: [workstation, workstation_install]
+
+- name: Install Ansible collections
+  community.general.ansible_galaxy_install:
+    type: collection
+    name: "{{ item.name }}:{{ item.version }}"
+    dest: "{{ playbook_dir }}/../collections"
+  loop: "{{ workstation_ansible_collections }}"
+  tags: [workstation, workstation_install]
+
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: "{{ lookup('env', 'HOME') }}/.ssh"
+    state: directory
+    owner: "{{ lookup('env', 'USER') }}"
+    mode: "0700"
+  tags: [workstation, workstation_configure]
+
+- name: Install SSH key on homelab server
+  delegate_to: "{{ homelab_host }}"
+  ansible.posix.authorized_key:
+    user: "{{ homelab_user }}"
+    key: "{{ lookup('file', workstation_ssh_key_path + '.pub') }}"
+    state: present
+  tags: [workstation, workstation_configure]
+
+- name: Ensure kubeconfig directory exists
+  ansible.builtin.file:
+    path: "{{ workstation_kubeconfig_dir }}"
+    state: directory
+    owner: "{{ lookup('env', 'USER') }}"
+    mode: "0700"
+  tags: [workstation, workstation_configure]
+
+- name: Fetch K3s kubeconfig from server
+  delegate_to: "{{ homelab_host }}"
+  become: true
+  ansible.builtin.fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ workstation_kubeconfig_file }}"
+    flat: true
+  tags: [workstation, workstation_configure]
+
+- name: Set kubeconfig file permissions
+  ansible.builtin.file:
+    path: "{{ workstation_kubeconfig_file }}"
+    owner: "{{ lookup('env', 'USER') }}"
+    mode: "{{ workstation_kubeconfig_mode }}"
+  tags: [workstation, workstation_configure]
+
+- name: Patch kubeconfig server address
+  ansible.builtin.replace:
+    path: "{{ workstation_kubeconfig_file }}"
+    regexp: "server: .*"
+    replace: "server: {{ homelab_kubernetes_server }}"
+  tags: [workstation, workstation_configure]
+
+- name: Verify age key matches SOPS recipient
+  ansible.builtin.shell:
+    cmd: >-
+      set -euo pipefail;
+      derived="$(age-keygen -y {{ workstation_age_key_path }})";
+      [ "$derived" = "{{ workstation_sops_age_recipient }}" ]
+  register: _workstation_sops_recipient
+  changed_when: false
+  tags: [workstation, workstation_configure]
+
+- name: Verify SSH key is valid
+  ansible.builtin.command:
+    cmd: ssh-keygen -l -f {{ workstation_ssh_key_path }}
+  register: _workstation_ssh_key_valid
+  changed_when: false
+  tags: [workstation, workstation_verify]
+
+- name: Verify kubeconfig connects to cluster
+  ansible.builtin.command:
+    cmd: kubectl get nodes
+  environment:
+    KUBECONFIG: "{{ workstation_kubeconfig_file }}"
+  register: _workstation_kubeconfig_valid
+  changed_when: false
+  tags: [workstation, workstation_verify]
+
+- name: Verify SSH key authenticates to server
+  ansible.builtin.command:
+    cmd: >-
+      ssh -o BatchMode=yes -o ConnectTimeout=10
+      -o IdentitiesOnly=yes -i {{ workstation_ssh_key_path }}
+      {{ homelab_user }}@{{ homelab_host }} true
+  register: _workstation_ssh_auth
+  changed_when: false
+  tags: [workstation, workstation_verify]

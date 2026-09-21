@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: base
-  author: homelab
+  author: sojournerdev
   description: >
     Foundational server configuration: system packages, SSH hardening,
     NTP synchronization, kernel tuning for k3s, and unattended security

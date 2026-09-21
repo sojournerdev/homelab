@@ -7,7 +7,7 @@
     cache_valid_time: 3600
   tags: base
 
-- name: Persist kernel modules for boot
+- name: Persist kernel modules
   ansible.builtin.copy:
     dest: /etc/modules-load.d/base.conf
     owner: root
@@ -19,14 +19,15 @@
       {% endfor %}
   tags: base
 
-- name: Load kernel modules for current boot
+- name: Load kernel modules
   ansible.builtin.command:
     cmd: "modprobe {{ item }}"
   loop: "{{ base_kernel_modules }}"
-  changed_when: false
+  register: _base_modprobe
+  changed_when: _base_modprobe.rc == 0
   tags: base
 
-- name: Apply sysctl settings idempotently
+- name: Apply sysctl settings
   ansible.posix.sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"

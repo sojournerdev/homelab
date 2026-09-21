@@ -66,5 +66,3 @@ base_kernel_modules:
   - ip_vs_wrr
   - ip_vs_sh
   - nf_conntrack
-
-base_unattended_auto_reboot: false

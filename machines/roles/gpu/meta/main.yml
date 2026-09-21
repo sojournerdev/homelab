@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: gpu
-  author: homelab
+  author: sojournerdev
   description: >
     Installs NVIDIA container toolkit so K3s auto-detects GPU runtimes.
     Verifies runtime binary and GPU accessibility after install.
