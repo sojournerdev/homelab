@@ -84,7 +84,9 @@ metadata:
   namespace: inference
 spec:
   parentRefs:
-    - name: platform-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: platform-gateway
       namespace: gateway-system
   rules:
     - matches:
@@ -92,5 +94,7 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: inference-router-service
+        - group: ""
+          kind: Service
+          name: inference-router-service
           port: 80

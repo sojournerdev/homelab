@@ -1,0 +1,8 @@
+# All repository scripts use Bash.
+shell=bash
+
+# Follow sourced files when scripts add them later.
+external-sources=true
+
+# Keep variable references explicit and catch uninitialized environment assumptions.
+enable=check-unassigned-uppercase

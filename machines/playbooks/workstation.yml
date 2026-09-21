@@ -1,0 +1,7 @@
+---
+- name: Configure local Ansible controller
+  hosts: workstation
+  gather_facts: true
+
+  roles:
+    - role: workstation

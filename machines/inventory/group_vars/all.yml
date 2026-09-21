@@ -1,4 +1,0 @@
----
-# Shared across all compute classes.
-# Override per-host in host_vars/ or per-group in group_vars/<group>.yml.
-k3s_version: v1.35.3+k3s1

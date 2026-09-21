@@ -1,4 +1,12 @@
 ---
+- name: Assert K3s version is valid semver
+  ansible.builtin.assert:
+    that:
+      - k3s_server_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+k3s[0-9]+$')
+    fail_msg: >-
+      k3s_server_version '{{ k3s_server_version }}' must match vX.Y.Z+k3sN
+  tags: [k3s]
+
 - name: Ensure K3s config directory exists
   ansible.builtin.file:
     path: "{{ k3s_server_config_dir }}"
@@ -16,9 +24,10 @@
   failed_when: false
   tags: k3s
 
-- name: Determine whether K3s install is needed
+- name: Check K3s version against desired
   ansible.builtin.set_fact:
-    k3s_server_needs_install: "{{ k3s_server_detected_version != k3s_version }}"
+    k3s_server_needs_install: >-
+      {{ k3s_server_detected_version != k3s_server_version }}
   vars:
     k3s_server_detected_version: >-
       {{ (k3s_server_version_result.stdout | default(''))
@@ -51,7 +60,7 @@
   ansible.builtin.command:
     cmd: "{{ k3s_server_install_script_path }}"
   environment:
-    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
     INSTALL_K3S_EXEC: "{{ k3s_server_install_exec }}"
   register: k3s_server_install
   changed_when: k3s_server_install.rc == 0

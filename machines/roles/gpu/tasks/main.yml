@@ -1,5 +1,14 @@
 ---
-- name: Add NVIDIA container toolkit GPG key
+- name: Install NVIDIA driver
+  ansible.builtin.apt:
+    name: "{{ gpu_nvidia_driver_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  notify: Reboot for nvidia driver
+  tags: gpu
+
+- name: Deploy NVIDIA container toolkit GPG key
   ansible.builtin.get_url:
     url: "{{ gpu_nvidia_container_toolkit_key_url }}"
     dest: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -8,7 +17,7 @@
     mode: "0644"
   tags: gpu
 
-- name: Add NVIDIA container toolkit repository
+- name: Configure NVIDIA container toolkit repository
   ansible.builtin.copy:
     dest: /etc/apt/sources.list.d/nvidia-container-toolkit.list
     owner: root
@@ -25,18 +34,22 @@
     cache_valid_time: 3600
   tags: gpu
 
-- name: Verify nvidia-ctk binary exists
+- name: Verify nvidia-ctk binary
   ansible.builtin.command:
     cmd: which nvidia-ctk
   register: gpu_nvidia_ctk_check
   changed_when: false
   tags: gpu
 
-- name: Verify nvidia-container-runtime binary exists
+- name: Verify nvidia-container-runtime binary
   ansible.builtin.command:
     cmd: which nvidia-container-runtime
   register: gpu_nvidia_runtime_bin
   changed_when: false
+  tags: gpu
+
+- name: Flush pending reboot
+  ansible.builtin.meta: flush_handlers
   tags: gpu
 
 - name: Query GPU status via nvidia-smi
@@ -49,11 +62,4 @@
   retries: 3
   delay: 5
   until: gpu_nvidia_smi_output.rc == 0
-  tags: gpu
-
-- name: Display GPU and runtime status
-  ansible.builtin.debug:
-    msg: |
-      GPU: {{ gpu_nvidia_smi_output.stdout }}
-      Runtime binary: {{ gpu_nvidia_runtime_bin.stdout }}
   tags: gpu

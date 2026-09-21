@@ -7,7 +7,7 @@
   failed_when: false
   tags: firewall
 
-- name: Disable UFW for k3s compatibility
+- name: Disable UFW for k3s
   ansible.builtin.command:
     cmd: ufw disable
   register: firewall_ufw_disable

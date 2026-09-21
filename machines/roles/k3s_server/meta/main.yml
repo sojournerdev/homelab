@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: k3s_server
-  author: homelab
+  author: sojournerdev
   description: >
     Installs and configures k3s as a single-node Kubernetes server.
     Compares installed version against desired, installs only when needed,

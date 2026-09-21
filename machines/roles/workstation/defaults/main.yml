@@ -1,0 +1,32 @@
+---
+workstation_brew_packages:
+  - mise
+  - pipx
+
+workstation_pipx_packages:
+  - ansible-core
+  - ansible-lint
+
+workstation_ansible_collections:
+  - name: ansible.posix
+    version: ">=2.2.0"
+  - name: community.general
+    version: ">=8.0.0"
+  - name: community.crypto
+    version: ">=2.18.0"
+
+# SSH keypair for homelab server access.
+# Role asserts it exists — never generates or overwrites.
+workstation_ssh_key_path: "{{ lookup('env', 'HOME') }}/.ssh/ansible"
+
+# Age key for SOPS encryption.
+# Role asserts it exists — never generates or overwrites.
+workstation_age_key_path: "{{ lookup('env', 'HOME') }}/.sops/age.agekey"
+
+# Public key recipient in .sops.yaml — must match the age key.
+workstation_sops_age_recipient: >-
+  age1hvn6a2qlvc2wzzax29psfxxuwrc58xv0226ysuphpr3dnhr5k4ysmwv087
+
+workstation_kubeconfig_dir: "{{ lookup('env', 'HOME') }}/.kube/tinycloud"
+workstation_kubeconfig_file: "{{ workstation_kubeconfig_dir }}/config"
+workstation_kubeconfig_mode: "0600"
