@@ -72,11 +72,15 @@ spec:
       name: envoy-proxy
   listeners:
     - name: https
+      hostname: "*.home.arpa"
       protocol: HTTPS
       port: 443
       allowedRoutes:
         namespaces:
-          from: All
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: envoy
       tls:
         mode: Terminate
         certificateRefs:
