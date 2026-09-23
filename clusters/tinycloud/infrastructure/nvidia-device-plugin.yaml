@@ -1,7 +1,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: gpu-device-plugin-charts
+  name: nvidia-device-plugin
   namespace: flux-system
 spec:
   interval: 24h
@@ -10,19 +10,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: gpu-system
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/audit: privileged
-    pod-security.kubernetes.io/warn: privileged
-    app.kubernetes.io/part-of: homelab-platform
-    app.kubernetes.io/managed-by: flux
+  name: nvidia-device-plugin
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: gpu-device-plugin
-  namespace: gpu-system
+  name: nvidia-device-plugin
+  namespace: nvidia-device-plugin
 spec:
   interval: 30m
   timeout: 10m
@@ -32,13 +26,15 @@ spec:
       version: 0.20.0
       sourceRef:
         kind: HelmRepository
-        name: gpu-device-plugin-charts
+        name: nvidia-device-plugin
         namespace: flux-system
       interval: 12h
   install:
+    crds: CreateReplace
     remediation:
       retries: 3
   upgrade:
+    crds: CreateReplace
     remediation:
       retries: 3
   values:

@@ -27,9 +27,3 @@ tech outside of work.
 | Ansible | Machine provisioning and configuration |
 | GPU runtime | Runs GPU-enabled workloads and AI experiments |
 | SOPS and age | Keeps secrets encrypted |
-
-## Limitations
-
-K3s runs on one server, along with the storage and services it hosts. This
-keeps the platform simple, but if the server, storage, power, or network goes
-down, the services go down with it.

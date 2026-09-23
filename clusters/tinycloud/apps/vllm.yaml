@@ -2,7 +2,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: inference-charts
+  name: vllm
   namespace: flux-system
 spec:
   interval: 24h
@@ -11,19 +11,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: inference
-  labels:
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/audit: restricted
-    pod-security.kubernetes.io/warn: restricted
-    app.kubernetes.io/part-of: homelab-apps
-    app.kubernetes.io/managed-by: flux
+  name: vllm
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: inference
-  namespace: inference
+  name: vllm
+  namespace: vllm
 spec:
   interval: 30m
   timeout: 15m
@@ -33,21 +27,20 @@ spec:
       version: "0.1.12"
       sourceRef:
         kind: HelmRepository
-        name: inference-charts
+        name: vllm
         namespace: flux-system
       interval: 12h
   install:
+    crds: CreateReplace
     remediation:
       retries: 3
   upgrade:
+    crds: CreateReplace
     remediation:
       retries: 3
   values:
     servingEngineSpec:
       enableEngine: true
-      sidecar:
-        image: "lmcache/lmstack-sidecar:2025-07-28"
-        imagePullPolicy: IfNotPresent
       modelSpec:
         - name: qwen-instruct
           runtimeClassName: nvidia
@@ -80,14 +73,14 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: inference-api
-  namespace: inference
+  name: vllm-api
+  namespace: vllm
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: platform-gateway
-      namespace: gateway-system
+      name: envoy-gateway
+      namespace: envoy-gateway-system
   rules:
     - matches:
         - path:
@@ -96,5 +89,5 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: inference-router-service
+          name: vllm-router-service
           port: 80

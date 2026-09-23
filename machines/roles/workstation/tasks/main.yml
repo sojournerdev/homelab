@@ -18,11 +18,41 @@
   failed_when: not _workstation_ssh_key.stat.exists
   tags: [workstation, workstation_verify]
 
-- name: Assert age key exists
-  ansible.builtin.stat:
+- name: Ensure SOPS age key directory exists
+  ansible.builtin.file:
+    path: "{{ workstation_age_key_path | dirname }}"
+    state: directory
+    owner: "{{ lookup('env', 'USER') }}"
+    mode: "0700"
+  tags: [workstation, workstation_configure]
+
+- name: Generate SOPS age key
+  ansible.builtin.command:
+    cmd: "age-keygen -o {{ workstation_age_key_path }}"
+    creates: "{{ workstation_age_key_path }}"
+  tags: [workstation, workstation_configure]
+
+- name: Restrict age key permissions
+  ansible.builtin.file:
     path: "{{ workstation_age_key_path }}"
-  register: _workstation_age_key
-  failed_when: not _workstation_age_key.stat.exists
+    owner: "{{ lookup('env', 'USER') }}"
+    mode: "0600"
+  tags: [workstation, workstation_configure]
+
+- name: Extract age public key
+  ansible.builtin.command:
+    cmd: "age-keygen -y {{ workstation_age_key_path }}"
+  register: _workstation_age_public
+  changed_when: false
+  tags: [workstation, workstation_verify]
+
+- name: Verify age key matches SOPS recipient
+  ansible.builtin.assert:
+    that:
+      - _workstation_age_public.stdout == workstation_sops_age_recipient
+    fail_msg: >-
+      Age public key does not match. Add this to .sops.yaml and update inventory:
+      {{ _workstation_age_public.stdout }}
   tags: [workstation, workstation_verify]
 
 - name: Install Homebrew packages
@@ -45,14 +75,6 @@
   when: item not in _workstation_pipx_list.stdout
   register: _workstation_pipx_install
   changed_when: _workstation_pipx_install.rc == 0
-  tags: [workstation, workstation_install]
-
-- name: Install Ansible collections
-  community.general.ansible_galaxy_install:
-    type: collection
-    name: "{{ item.name }}:{{ item.version }}"
-    dest: "{{ playbook_dir }}/../collections"
-  loop: "{{ workstation_ansible_collections }}"
   tags: [workstation, workstation_install]
 
 - name: Ensure .ssh directory exists
@@ -95,21 +117,21 @@
     mode: "{{ workstation_kubeconfig_mode }}"
   tags: [workstation, workstation_configure]
 
+- name: Check kubeconfig server address
+  ansible.builtin.shell:
+    cmd: >-
+      grep -q 'server: {{ homelab_kubernetes_server }}'
+      {{ workstation_kubeconfig_file }} && echo correct || echo wrong
+  register: _workstation_kubeconfig_server
+  changed_when: false
+  tags: [workstation, workstation_configure]
+
 - name: Patch kubeconfig server address
   ansible.builtin.replace:
     path: "{{ workstation_kubeconfig_file }}"
     regexp: "server: .*"
     replace: "server: {{ homelab_kubernetes_server }}"
-  tags: [workstation, workstation_configure]
-
-- name: Verify age key matches SOPS recipient
-  ansible.builtin.shell:
-    cmd: >-
-      set -euo pipefail;
-      derived="$(age-keygen -y {{ workstation_age_key_path }})";
-      [ "$derived" = "{{ workstation_sops_age_recipient }}" ]
-  register: _workstation_sops_recipient
-  changed_when: false
+  when: _workstation_kubeconfig_server.stdout == "wrong"
   tags: [workstation, workstation_configure]
 
 - name: Verify SSH key is valid
@@ -126,9 +148,12 @@
     KUBECONFIG: "{{ workstation_kubeconfig_file }}"
   register: _workstation_kubeconfig_valid
   changed_when: false
+  retries: 3
+  delay: 5
+  until: _workstation_kubeconfig_valid.rc == 0
   tags: [workstation, workstation_verify]
 
-- name: Verify SSH key authenticates to server
+- name: Verify SSH authenticates to server
   ansible.builtin.command:
     cmd: >-
       ssh -o BatchMode=yes -o ConnectTimeout=10
@@ -136,4 +161,7 @@
       {{ homelab_user }}@{{ homelab_host }} true
   register: _workstation_ssh_auth
   changed_when: false
+  retries: 3
+  delay: 5
+  until: _workstation_ssh_auth.rc == 0
   tags: [workstation, workstation_verify]

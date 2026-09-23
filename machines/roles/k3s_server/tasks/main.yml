@@ -94,3 +94,34 @@
   until: k3s_server_node_health.rc == 0
   changed_when: false
   tags: k3s
+
+- name: Ensure flux-system namespace exists
+  delegate_to: localhost
+  become: false
+  kubernetes.core.k8s:
+    name: flux-system
+    api_version: v1
+    kind: Namespace
+    state: present
+  register: _k3s_server_flux_namespace
+  retries: 3
+  delay: 5
+  until: _k3s_server_flux_namespace is succeeded
+  tags: sops
+
+- name: Create SOPS age Secret in flux-system
+  delegate_to: localhost
+  become: false
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sops-age
+        namespace: flux-system
+      type: Opaque
+      immutable: true
+      stringData:
+        age.agekey: "{{ lookup('file', k3s_server_age_key_path) }}"
+  tags: sops
