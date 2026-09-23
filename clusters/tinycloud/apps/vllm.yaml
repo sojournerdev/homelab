@@ -42,10 +42,10 @@ spec:
       retries: 3
   values:
     servingEngineSpec:
+      labels:
+        release: prometheus
       serviceMonitor:
         enabled: true
-        additionalLabels:
-          release: prometheus
         interval: 30s
       modelSpec:
         - name: qwen-instruct
