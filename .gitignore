@@ -25,6 +25,7 @@ ansible.log
 machines/collections/
 
 # Local overrides/secrets
+.certs/
 *.local.yml
 *.local.yaml
 *.local

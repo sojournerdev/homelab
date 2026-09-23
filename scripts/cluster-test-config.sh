@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-artifact_dir=".cache/cluster-artifact"
+cluster_dir="clusters/tinycloud"
+schema_config=".fluxschema.yml"
 
-schema_dir="$(mktemp -d "${TMPDIR:-/tmp}/homelab-flux-schema.XXXXXX")"
-# shellcheck disable=SC2329
-cleanup() {
-  rm -rf -- "$schema_dir"
-}
-trap cleanup EXIT
+flux build kustomization infrastructure \
+  --path "$cluster_dir/infrastructure" \
+  --kustomization-file "$cluster_dir/infrastructure.yaml" \
+  --dry-run \
+  | flux schema validate --config "$schema_config"
 
-kustomize build "$artifact_dir/crds" \
-  | flux schema extract crd --output-dir "$schema_dir" >/dev/null
-
-kustomize build "$artifact_dir" \
-  | flux schema validate \
-      --schema-location "$schema_dir" \
-      --schema-location default \
-      --schema-location ecosystem
+flux build kustomization apps \
+  --path "$cluster_dir/apps" \
+  --kustomization-file "$cluster_dir/apps.yaml" \
+  --dry-run \
+  | flux schema validate --config "$schema_config"

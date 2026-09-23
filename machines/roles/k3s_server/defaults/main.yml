@@ -17,3 +17,6 @@ k3s_server_write_kubeconfig_mode: "0600"
 k3s_server_disable_components:
   - servicelb
   - traefik
+
+# Age key for SOPS — path on the workstation where the key is generated.
+k3s_server_age_key_path: "{{ lookup('env', 'HOME') }}/.sops/age.agekey"
