@@ -42,14 +42,17 @@ spec:
       retries: 3
   values:
     servingEngineSpec:
-      enableEngine: true
+      serviceMonitor:
+        enabled: true
+        additionalLabels:
+          release: prometheus
+        interval: 30s
       modelSpec:
         - name: qwen-instruct
           runtimeClassName: nvidia
           repository: vllm/vllm-openai
           tag: "v0.29.0"
           modelURL: Qwen/Qwen3-4B-AWQ
-          replicaCount: 1
           requestCPU: 2
           requestMemory: "4Gi"
           requestGPU: 1
@@ -61,16 +64,15 @@ spec:
             - ReadWriteOnce
           vllmConfig:
             tensorParallelSize: 1
-            quantization: "awq"
             maxModelLen: 4096
             dtype: "float16"
+            quantization: "awq"
             gpuMemoryUtilization: 0.80
             extraArgs:
               - "--served-model-name"
               - "qwen3-4b"
     routerSpec:
-      tag: "v0.1.12"
-      imagePullPolicy: IfNotPresent
+      enableRouter: false
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -94,5 +96,5 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: vllm-router-service
+          name: vllm-qwen-instruct-engine-service
           port: 80
