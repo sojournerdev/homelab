@@ -76,4 +76,4 @@ run = [
 # ── TLS ──────────────────────────────────────────────────────────
 [tasks.tls-generate]
 description = "Generate TLS cert and store encrypted secret in Git"
-run = "scripts/generate-tls.sh"
+run = "scripts/tls-generate.sh"
