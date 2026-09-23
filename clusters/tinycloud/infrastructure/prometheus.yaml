@@ -40,6 +40,15 @@ spec:
     crds: CreateReplace
     remediation:
       retries: 3
+  values:
+    prometheus:
+      prometheusSpec:
+        serviceMonitorSelector:
+          matchLabels:
+            monitoring: prometheus
+        podMonitorSelector:
+          matchLabels:
+            monitoring: prometheus
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
