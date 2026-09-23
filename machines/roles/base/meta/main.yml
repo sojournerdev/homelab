@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: base
+  author: sojournerdev
+  description: >
+    Foundational server configuration: system packages, SSH hardening,
+    NTP synchronization, kernel tuning for k3s, and unattended security
+    updates. Every other role assumes this has run first.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - hardening
+    - ssh
+    - sysctl
+    - ntp
+dependencies: []

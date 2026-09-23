@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: firewall
+  author: sojournerdev
+  description: >
+    Host-level security for k3s nodes. Disables UFW (k3s manages its own
+    iptables), installs fail2ban for SSH brute-force protection, and
+    documents required ports for router configuration.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - firewall
+    - fail2ban
+    - security
+dependencies: []

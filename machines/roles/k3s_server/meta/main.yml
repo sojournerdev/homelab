@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: k3s_server
+  author: sojournerdev
+  description: >
+    Installs and configures k3s as a single-node Kubernetes server.
+    Compares installed version against desired, installs only when needed,
+    and verifies cluster health after bootstrap. Uses system containerd
+    socket for CRI.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - k3s
+    - kubernetes
+    - k8s
+    - container
+dependencies: []

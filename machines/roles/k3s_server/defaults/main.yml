@@ -1,0 +1,22 @@
+---
+k3s_server_version: v1.35.3+k3s1
+
+k3s_server_install_exec: server
+k3s_server_install_script_url: https://get.k3s.io
+
+k3s_server_config_dir: /etc/rancher/k3s
+k3s_server_config_file: "{{ k3s_server_config_dir }}/config.yaml"
+k3s_server_install_script_path: "{{ k3s_server_config_dir }}/install.sh"
+
+k3s_server_binary_path: /usr/local/bin/k3s
+k3s_server_status_command: >-
+  {{ k3s_server_binary_path }} kubectl get nodes -o wide
+k3s_server_node_name: "{{ inventory_hostname }}"
+k3s_server_write_kubeconfig_mode: "0600"
+
+k3s_server_disable_components:
+  - servicelb
+  - traefik
+
+# Age key for SOPS — path on the workstation where the key is generated.
+k3s_server_age_key_path: "{{ lookup('env', 'HOME') }}/.sops/age.agekey"

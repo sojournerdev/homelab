@@ -1,0 +1,81 @@
+---
+- name: Check whether UFW is active
+  ansible.builtin.command:
+    cmd: ufw status
+  register: firewall_ufw_status
+  changed_when: false
+  failed_when: false
+  tags: firewall
+
+- name: Disable UFW for k3s
+  ansible.builtin.command:
+    cmd: ufw disable
+  register: firewall_ufw_disable
+  changed_when: "'Status: active' in firewall_ufw_status.stdout"
+  when:
+    - firewall_ufw_status.rc == 0
+    - "'Status: active' in firewall_ufw_status.stdout"
+  tags: firewall
+
+- name: Install fail2ban for SSH brute-force protection
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+  when: firewall_fail2ban_enabled
+  tags: firewall
+
+- name: Deploy fail2ban jail config
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  when: firewall_fail2ban_enabled
+  notify: Restart fail2ban
+  tags: firewall
+
+- name: Enable and start fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+  when: firewall_fail2ban_enabled
+  tags: firewall
+
+- name: Apply pending firewall restarts
+  ansible.builtin.meta: flush_handlers
+  when: firewall_fail2ban_enabled
+  tags: firewall
+
+- name: Verify fail2ban sshd jail is active
+  ansible.builtin.command:
+    cmd: fail2ban-client status sshd
+  register: firewall_fail2ban_status
+  changed_when: false
+  retries: 3
+  delay: 5
+  until: firewall_fail2ban_status.rc == 0
+  when: firewall_fail2ban_enabled
+  tags: firewall
+
+- name: Display fail2ban status
+  ansible.builtin.debug:
+    msg: "{{ firewall_fail2ban_status.stdout_lines }}"
+  when: firewall_fail2ban_enabled
+  tags: firewall
+
+- name: Display required ports for router configuration
+  ansible.builtin.debug:
+    msg: |
+      Required open ports (configure on router/firewall):
+      {% for p in firewall_required_ports.tcp %}
+      TCP {{ p.port }} — {{ p.desc }}
+      {% endfor %}
+      {% for p in firewall_required_ports.udp %}
+      UDP {{ p.port }} — {{ p.desc }}
+      {% endfor %}
+      {% for r in firewall_required_ports.tcp_ranges %}
+      TCP {{ r.start }}:{{ r.end }} — {{ r.desc }}
+      {% endfor %}
+  tags: firewall

@@ -1,8 +1,29 @@
-# Overview
+# Homelab
 
-A playground for experiments, new tools, and whatever I feel like deploying—all in the name of learning.
+A personal homelab for learning, experimenting, and enjoying my passion for
+tech outside of work.
 
+## Architecture
 
-## License
+### Hardware
 
-This project is licensed under the [MIT LICENSE](LICENSE).
+| Component | Details |
+|---|---|
+| Host | ASUS ROG G700TF desktop server |
+| Operating system | Ubuntu Linux |
+| CPU | Intel Core Ultra 5 225F |
+| Memory | 16 GB |
+| Storage | 1 TB NVMe |
+| GPU | NVIDIA GeForce RTX 5060 with 8 GB VRAM |
+| Workstation | macOS system used for administration and development |
+
+### Software
+
+| Component | Responsibility |
+|---|---|
+| Linux server | Compute, local storage, and cluster host |
+| K3s | Container orchestration |
+| Flux | Keeps the cluster in sync with Git |
+| Ansible | Machine provisioning and configuration |
+| GPU runtime | Runs GPU-enabled workloads and AI experiments |
+| SOPS and age | Keeps secrets encrypted |

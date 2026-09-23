@@ -1,0 +1,13 @@
+apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  schemaLocation:
+    - default
+    - ecosystem
+    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+  failFast: true
+  skipMissingSchemas: false
+  skipFile:
+    - '.*'
+  verbose: true
+  output: json

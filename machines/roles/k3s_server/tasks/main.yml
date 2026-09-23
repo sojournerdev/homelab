@@ -1,0 +1,127 @@
+---
+- name: Assert K3s version is valid semver
+  ansible.builtin.assert:
+    that:
+      - k3s_server_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+k3s[0-9]+$')
+    fail_msg: >-
+      k3s_server_version '{{ k3s_server_version }}' must match vX.Y.Z+k3sN
+  tags: [k3s]
+
+- name: Ensure K3s config directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_server_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  tags: k3s
+
+- name: Check current K3s version
+  ansible.builtin.command:
+    cmd: "{{ k3s_server_binary_path }} --version"
+  register: k3s_server_version_result
+  changed_when: false
+  failed_when: false
+  tags: k3s
+
+- name: Check K3s version against desired
+  ansible.builtin.set_fact:
+    k3s_server_needs_install: >-
+      {{ k3s_server_detected_version != k3s_server_version }}
+  vars:
+    k3s_server_detected_version: >-
+      {{ (k3s_server_version_result.stdout | default(''))
+         | regex_search(k3s_server_version_regex)
+         | default('', true) }}
+    k3s_server_version_regex: "v[0-9]+\\.[0-9]+\\.[0-9]+\\+k3s[0-9]+"
+  tags: k3s
+
+- name: Render K3s server config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ k3s_server_config_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart K3s service
+  tags: k3s
+
+- name: Download K3s installer
+  ansible.builtin.get_url:
+    url: "{{ k3s_server_install_script_url }}"
+    dest: "{{ k3s_server_install_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+  when: k3s_server_needs_install | bool
+  tags: k3s
+
+- name: Install requested K3s version
+  ansible.builtin.command:
+    cmd: "{{ k3s_server_install_script_path }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
+    INSTALL_K3S_EXEC: "{{ k3s_server_install_exec }}"
+  register: k3s_server_install
+  changed_when: k3s_server_install.rc == 0
+  when: k3s_server_needs_install | bool
+  tags: k3s
+
+- name: Remove K3s installer
+  ansible.builtin.file:
+    path: "{{ k3s_server_install_script_path }}"
+    state: absent
+  when: k3s_server_needs_install | bool
+  tags: k3s
+
+- name: Ensure K3s service is running
+  ansible.builtin.systemd:
+    name: k3s
+    enabled: true
+    state: started
+  tags: k3s
+
+- name: Apply pending K3s restart
+  ansible.builtin.meta: flush_handlers
+  tags: k3s
+
+- name: Verify K3s node is healthy
+  ansible.builtin.command:
+    cmd: "{{ k3s_server_status_command }}"
+  register: k3s_server_node_health
+  retries: 12
+  delay: 10
+  until: k3s_server_node_health.rc == 0
+  changed_when: false
+  tags: k3s
+
+- name: Ensure flux-system namespace exists
+  delegate_to: localhost
+  become: false
+  kubernetes.core.k8s:
+    name: flux-system
+    api_version: v1
+    kind: Namespace
+    state: present
+  register: _k3s_server_flux_namespace
+  retries: 3
+  delay: 5
+  until: _k3s_server_flux_namespace is succeeded
+  tags: sops
+
+- name: Create SOPS age Secret in flux-system
+  delegate_to: localhost
+  become: false
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sops-age
+        namespace: flux-system
+      type: Opaque
+      immutable: true
+      stringData:
+        age.agekey: "{{ lookup('file', k3s_server_age_key_path) }}"
+  tags: sops

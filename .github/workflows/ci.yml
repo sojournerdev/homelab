@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      ANSIBLE_COLLECTIONS_PATH: machines/collections
+    steps:
+      # Install tools (mise manages versions, pipx for ansible-lint)
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+        with:
+          install: true
+      - run: pipx install ansible-lint
+
+      - name: Decrypt SOPS secrets
+        run: mkdir -p ~/.sops && echo "${{ secrets.SOPS_AGE_KEY }}" > ~/.sops/age.agekey
+
+      # Validate linting, syntax, and Flux schemas
+      - run: mise run check
