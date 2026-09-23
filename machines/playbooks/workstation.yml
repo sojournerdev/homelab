@@ -3,17 +3,5 @@
   hosts: workstation
   gather_facts: true
 
-  pre_tasks:
-    - name: Install Ansible collections
-      ansible.builtin.command:
-        cmd: ansible-galaxy collection install -r ../requirements.yml -p ../collections
-        chdir: "{{ playbook_dir }}"
-      changed_when: false
-
-    - name: Install Python dependencies for Ansible
-      ansible.builtin.command:
-        cmd: pipx inject ansible-core kubernetes
-      changed_when: false
-
   roles:
     - role: workstation

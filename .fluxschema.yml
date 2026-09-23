@@ -10,4 +10,4 @@ validate:
   skipFile:
     - '.*'
   verbose: true
-  output: json
+  output: text
