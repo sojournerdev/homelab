@@ -22,6 +22,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: semantic-router
+  targetNamespace: semantic-router-operator-system
   wait: true
   timeout: 10m
   patches:
