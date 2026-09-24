@@ -131,6 +131,6 @@ spec:
     matchNames:
       - semantic-router-operator-system
   podMetricsEndpoints:
-    - targetPort: 8080
+    - portNumber: 8080
       interval: 30s
       path: /metrics
