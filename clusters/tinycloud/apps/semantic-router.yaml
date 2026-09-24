@@ -1,0 +1,131 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: semantic-router
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/vllm-project/semantic-router
+  ref:
+    tag: v0.3.0
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: semantic-router-operator
+  namespace: flux-system
+spec:
+  interval: 30m
+  path: ./deploy/operator/config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: semantic-router
+  wait: true
+  timeout: 10m
+  patches:
+    - patch: |
+        - op: replace
+          path: /spec/template/spec/containers/0/image
+          value: ghcr.io/vllm-project/semantic-router/operator:v0.3.0
+      target:
+        group: apps
+        version: v1
+        kind: Deployment
+        name: semantic-router-operator-controller-manager
+        namespace: semantic-router-operator-system
+    - patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/securityContext/readOnlyRootFilesystem
+          value: true
+        - op: add
+          path: /spec/template/spec/containers/0/volumeMounts
+          value:
+            - name: tmp
+              mountPath: /tmp
+        - op: add
+          path: /spec/template/spec/volumes
+          value:
+            - name: tmp
+              emptyDir: {}
+      target:
+        group: apps
+        version: v1
+        kind: Deployment
+        name: semantic-router-operator-controller-manager
+        namespace: semantic-router-operator-system
+    - patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: semantic-router-operator-manager-config
+          namespace: semantic-router-operator-system
+        data:
+          controller_manager_config.yaml: |
+            apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+            kind: ControllerManagerConfig
+            health:
+              healthProbeBindAddress: :8081
+            metrics:
+              bindAddress: 0.0.0.0:8080
+            webhook:
+              port: 9443
+            leaderElection:
+              leaderElect: true
+              resourceName: semantic-router-operator.vllm.ai
+      target:
+        kind: ConfigMap
+        name: semantic-router-operator-manager-config
+        namespace: semantic-router-operator-system
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: semantic-router-operator
+  namespace: semantic-router-operator-system
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: semantic-router-operator
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: semantic-router-operator
+  namespace: semantic-router-operator-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: semantic-router-operator
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+    - ports:
+        - port: 8081
+          protocol: TCP
+        - port: 9443
+          protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: semantic-router-operator
+  namespace: semantic-router-operator-system
+  labels:
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: semantic-router-operator
+  namespaceSelector:
+    matchNames:
+      - semantic-router-operator-system
+  podMetricsEndpoints:
+    - targetPort: 8080
+      interval: 30s
+      path: /metrics
