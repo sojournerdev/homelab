@@ -42,6 +42,15 @@ spec:
         namespace: semantic-router-operator-system
     - patch: |
         - op: add
+          path: /spec/template/spec/containers/0/ports
+          value:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+        - op: add
           path: /spec/template/spec/containers/0/securityContext/readOnlyRootFilesystem
           value: true
         - op: add
@@ -131,6 +140,6 @@ spec:
     matchNames:
       - semantic-router-operator-system
   podMetricsEndpoints:
-    - portNumber: 8080
+    - port: metrics
       interval: 30s
       path: /metrics
