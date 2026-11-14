@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - inference
   - gateway
+  - registry
   - observability
 labels:
   - pairs:

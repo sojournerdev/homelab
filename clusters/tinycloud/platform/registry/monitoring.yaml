@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: zot
+  namespace: zot
+  labels:
+    platform.tinycloud.dev/monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zot
+  endpoints:
+    - port: zot
+      path: /metrics
+      interval: 30s
