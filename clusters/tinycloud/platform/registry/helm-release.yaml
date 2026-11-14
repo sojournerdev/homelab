@@ -42,9 +42,11 @@ spec:
       storageClassName: local-path
       accessModes:
         - ReadWriteOnce
-    # Use the structured Secret-backed config below; disable chart file defaults.
-    configFiles: {}
-    secretFiles: {}
+    # Use the structured Secret-backed config below; explicitly unset chart file defaults.
+    configFiles:
+      config.json: null
+    secretFiles:
+      config.json: null
     config:
       storage:
         rootDirectory: /var/lib/registry
