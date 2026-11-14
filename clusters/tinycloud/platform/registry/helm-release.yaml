@@ -42,27 +42,33 @@ spec:
       storageClassName: local-path
       accessModes:
         - ReadWriteOnce
-    # Use the structured Secret-backed config below; explicitly unset chart file defaults.
+    # Mount the Zot configuration from the chart-managed ConfigMap.
+    mountConfig: true
     configFiles:
-      config.json: null
-    secretFiles:
-      config.json: null
-    config:
-      storage:
-        rootDirectory: /var/lib/registry
-        commit: true
-        dedupe: true
-        gc: true
-        gcDelay: 1h
-        gcInterval: 24h
-        gcTimeWindow: "01:00-05:00"
-      http:
-        address: 0.0.0.0
-        port: 5000
-      extensions:
-        metrics:
-          enable: true
-          prometheus:
-            path: /metrics
-      log:
-        level: info
+      config.json: |-
+        {
+          "storage": {
+            "rootDirectory": "/var/lib/registry",
+            "commit": true,
+            "dedupe": true,
+            "gc": true,
+            "gcDelay": "1h",
+            "gcInterval": "24h",
+            "gcTimeWindow": "01:00-05:00"
+          },
+          "http": {
+            "address": "0.0.0.0",
+            "port": "5000"
+          },
+          "extensions": {
+            "metrics": {
+              "enable": true,
+              "prometheus": {
+                "path": "/metrics"
+              }
+            }
+          },
+          "log": {
+            "level": "info"
+          }
+        }
