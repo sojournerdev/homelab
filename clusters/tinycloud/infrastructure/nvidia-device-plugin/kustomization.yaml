@@ -6,5 +6,5 @@ resources:
   - helm-release.yaml
 labels:
   - pairs:
-      app.kubernetes.io/part-of: nvidia-device-plugin
-    includeSelectors: false
+      app.kubernetes.io/name: nvidia-device-plugin
+      app.kubernetes.io/part-of: infrastructure
