@@ -53,7 +53,7 @@
       - _workstation_age_public.stdout == workstation_sops_age_recipient
     fail_msg: >-
       Age public key does not match. Add this to .sops.yaml and update inventory:
-      {{ _workstation_age_public.stdout }}
+        {{ _workstation_age_public.stdout }}
   tags: [workstation, workstation_verify]
 
 - name: Install Homebrew packages

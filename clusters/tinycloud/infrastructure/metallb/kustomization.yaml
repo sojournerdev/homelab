@@ -7,5 +7,6 @@ resources:
   - address-pool.yaml
 labels:
   - pairs:
-      app.kubernetes.io/part-of: metallb
+      app.kubernetes.io/name: metallb
+      app.kubernetes.io/part-of: infrastructure
     includeSelectors: false

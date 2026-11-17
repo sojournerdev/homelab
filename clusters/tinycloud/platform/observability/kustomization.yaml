@@ -4,8 +4,8 @@ resources:
   - namespace.yaml
   - helm-repository.yaml
   - helm-release.yaml
-  - http-route.yaml
 labels:
   - pairs:
+      app.kubernetes.io/name: prometheus
       app.kubernetes.io/part-of: observability
     includeSelectors: false

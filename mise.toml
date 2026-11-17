@@ -81,9 +81,9 @@ run = "ansible-playbook playbooks/server.yml -i inventory/server.yml -c ssh --ch
 
 # ── Lint ──────────────────────────────────────────────────────────
 [tasks.yaml-lint]
-description = "Lint tracked YAML files"
+description = "Lint YAML files"
 depends = ["python-deps"]
-run = "git ls-files -z -- '*.yml' '*.yaml' | xargs -0 -I{} yamllint {}"
+run = "yamllint ."
 
 [tasks.ansible-lint]
 description = "Lint Ansible content"
@@ -91,13 +91,24 @@ depends = ["collections"]
 dir = "machines"
 run = "ansible-lint roles/ playbooks/"
 
-[tasks.lint]
-description = "Run repository linters"
-depends = ["yaml-lint", "ansible-lint"]
+[tasks.shell-lint]
+description = "Lint workflows and shell scripts"
 run = [
   "actionlint .github/workflows/*.yml",
   "shellcheck scripts/*.sh",
 ]
+
+[tasks.static-analysis]
+description = "Run static analysis"
+depends = ["yaml-lint", "shell-lint"]
+
+[tasks.ansible-validation]
+description = "Validate Ansible content"
+depends = ["ansible-lint", "ansible-validate"]
+
+[tasks.lint]
+description = "Run repository linters"
+depends = ["static-analysis", "ansible-lint"]
 
 [tasks.ansible-validate]
 description = "Validate Ansible syntax and inventories"
@@ -113,9 +124,9 @@ run = [
 [tasks.ci]
 description = "Run all non-mutating CI validation"
 depends = [
-  "lint",
-  "ansible-validate",
-  "cluster-test",
+  "static-analysis",
+  "ansible-validation",
+  "cluster-validation",
 ]
 
 # ── Cluster ───────────────────────────────────────────────────────
@@ -132,11 +143,6 @@ run = "scripts/cluster-test-config.sh"
 description = "Validate resources against a disposable Kubernetes API"
 run = "scripts/cluster-api-dry-run.sh"
 
-[tasks.cluster-test]
-description = "Run all cluster validation"
+[tasks.cluster-validation]
+description = "Validate rendered cluster resources"
 depends = ["cluster-schema", "cluster-api-dry-run"]
-
-# ── TLS ──────────────────────────────────────────────────────────
-[tasks.tls-generate]
-description = "Generate TLS cert and store encrypted secret in Git"
-run = "scripts/tls-generate.sh"
