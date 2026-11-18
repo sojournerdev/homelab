@@ -7,7 +7,6 @@ ignore: |
   machines/collections/
   tmp/
   .github/workflows/
-  clusters/tinycloud/flux-system/gotk-components.yaml
 
 rules:
   document-start: disable

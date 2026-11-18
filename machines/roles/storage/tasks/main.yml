@@ -1,0 +1,122 @@
+---
+- name: Install storage tools
+  ansible.builtin.apt:
+    name:
+      - lvm2
+      - e2fsprogs
+    state: present
+
+- name: Check configured volume group
+  ansible.builtin.command:
+    cmd: "vgs {{ storage_volume_group }} --noheadings"
+  register: storage_volume_group_check
+  changed_when: false
+  failed_when: false
+
+- name: Assert configured volume group exists
+  ansible.builtin.assert:
+    that:
+      - storage_volume_group_check.rc == 0
+    fail_msg: >-
+      Required volume group '{{ storage_volume_group }}' was not found.
+      Create it before running the storage role.
+
+- name: Check K3s data mount
+  ansible.builtin.command:
+    cmd: findmnt --mountpoint /var/lib/rancher/k3s --output SOURCE --noheadings
+  register: storage_cluster_mount
+  changed_when: false
+  failed_when: false
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Assert K3s is stopped before mounting
+  ansible.builtin.assert:
+    that:
+      - storage_cluster_mount.rc == 0
+        or ansible_facts.services.get('k3s.service', {}).get('state') != 'running'
+    fail_msg: >-
+      K3s is running while /var/lib/rancher/k3s is not mounted. Stop K3s
+      before allowing the storage role to mount lv_cluster.
+
+- name: Check existing K3s data
+  ansible.builtin.find:
+    paths: /var/lib/rancher/k3s
+    file_type: any
+    recurse: false
+    hidden: true
+  register: storage_existing_cluster_data
+  when: storage_cluster_mount.rc != 0
+
+- name: Assert K3s data mount source
+  ansible.builtin.assert:
+    that:
+      - (storage_cluster_mount.stdout | trim)
+        == ('/dev/' ~ storage_volume_group ~ '/lv_cluster')
+    fail_msg: >-
+      K3s data mount is incorrect: /var/lib/rancher/k3s is mounted from
+      '{{ storage_cluster_mount.stdout | trim }}', expected
+      '/dev/{{ storage_volume_group }}/lv_cluster'.
+    when: storage_cluster_mount.rc == 0
+
+- name: Assert K3s data directory is safe to mount
+  ansible.builtin.assert:
+    that:
+      - (storage_existing_cluster_data.matched | default(0) | int) == 0
+    fail_msg: >-
+      Refusing to mount '/dev/{{ storage_volume_group }}/lv_cluster' over
+      /var/lib/rancher/k3s because it contains
+      {{ storage_existing_cluster_data.matched }} existing entries.
+    when: storage_cluster_mount.rc != 0
+
+- name: Ensure logical volumes exist
+  community.general.lvol:
+    vg: "{{ storage_volume_group }}"
+    lv: "{{ item.name }}"
+    size: "{{ item.size }}"
+    state: present
+    shrink: false
+  loop: "{{ storage_volumes }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure filesystems exist
+  community.general.filesystem:
+    dev: "/dev/{{ storage_volume_group }}/{{ item.name }}"
+    fstype: "{{ storage_filesystem }}"
+  loop: "{{ storage_volumes }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure K3s data directory exists
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Ensure K3s data volume is mounted
+  ansible.posix.mount:
+    path: /var/lib/rancher/k3s
+    src: "/dev/{{ storage_volume_group }}/lv_cluster"
+    fstype: "{{ storage_filesystem }}"
+    opts: "{{ storage_mount_options }}"
+    state: mounted
+
+- name: Ensure workload data directory exists
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/storage
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Ensure workload data volume is mounted
+  ansible.posix.mount:
+    path: /var/lib/rancher/k3s/storage
+    src: "/dev/{{ storage_volume_group }}/lv_workloads"
+    fstype: "{{ storage_filesystem }}"
+    opts: "{{ storage_mount_options }}"
+    state: mounted

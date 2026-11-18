@@ -1,10 +1,10 @@
 ---
-- name: Restart sshd
+- name: Ensure SSH service is restarted
   ansible.builtin.systemd:
     name: sshd
     state: restarted
 
-- name: Restart timesyncd
+- name: Ensure time synchronization is restarted
   ansible.builtin.systemd:
     name: systemd-timesyncd
     state: restarted
