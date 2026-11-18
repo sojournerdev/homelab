@@ -1,0 +1,7 @@
+node-name: homelab
+data-dir: /var/lib/rancher/k3s
+default-local-storage-path: /var/lib/rancher/k3s/storage
+write-kubeconfig-mode: "0600"
+disable:
+  - servicelb
+  - traefik

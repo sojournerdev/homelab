@@ -1,18 +1,24 @@
 ---
-- name: Base hardening and firewall
+- name: Configure base host
   hosts: all
   become: true
   roles:
     - role: base
     - role: firewall
 
-- name: Provision GPU
+- name: Ensure storage is configured
+  hosts: all
+  become: true
+  roles:
+    - role: storage
+
+- name: Install GPU runtime
   hosts: all
   become: true
   roles:
     - role: gpu
 
-- name: Provision k3s server
+- name: Install K3s server
   hosts: all
   become: true
   roles:

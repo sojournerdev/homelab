@@ -1,4 +1,4 @@
 ---
-- name: Reboot for nvidia driver
+- name: Ensure host is rebooted for NVIDIA driver
   ansible.builtin.reboot:
     reboot_timeout: 300

@@ -1,0 +1,7 @@
+failOnInitError: true
+deviceDiscoveryStrategy: nvml
+runtimeClassName: nvidia
+devicePlugin:
+  enabled: true
+gfd:
+  enabled: true

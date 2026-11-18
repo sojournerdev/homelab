@@ -1,0 +1,10 @@
+---
+storage_volume_group: vg_system
+storage_filesystem: ext4
+storage_mount_options: defaults,noatime
+
+storage_volumes:
+  - name: lv_cluster
+    size: 150g
+  - name: lv_workloads
+    size: 150g

@@ -5,9 +5,8 @@
     state: present
     update_cache: true
     cache_valid_time: 3600
-  tags: base
 
-- name: Persist kernel modules
+- name: Configure kernel modules
   ansible.builtin.copy:
     dest: /etc/modules-load.d/base.conf
     owner: root
@@ -17,17 +16,14 @@
       {% for module in base_kernel_modules %}
       {{ module }}
       {% endfor %}
-  tags: base
 
-- name: Load kernel modules
-  ansible.builtin.command:
-    cmd: "modprobe {{ item }}"
+- name: Ensure kernel modules are loaded
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
   loop: "{{ base_kernel_modules }}"
-  register: _base_modprobe
-  changed_when: _base_modprobe.rc == 0
-  tags: base
 
-- name: Apply sysctl settings
+- name: Configure sysctl settings
   ansible.posix.sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"
@@ -35,9 +31,8 @@
     state: present
     reload: true
   loop: "{{ base_sysctl | dict2items }}"
-  tags: base
 
-- name: Deploy hardened sshd_config
+- name: Configure SSH hardening
   ansible.builtin.template:
     src: sshd_config.j2
     dest: /etc/ssh/sshd_config.d/99-hardened.conf
@@ -45,26 +40,23 @@
     group: root
     mode: "0600"
     validate: "sshd -t -f %s"
-  notify: Restart sshd
-  tags: base
+  notify: Ensure SSH service is restarted
 
-- name: Deploy timesyncd config for NTP
+- name: Configure time synchronization
   ansible.builtin.template:
     src: timesyncd.conf.j2
     dest: /etc/systemd/timesyncd.conf
     owner: root
     group: root
     mode: "0644"
-  notify: Restart timesyncd
-  tags: base
+  notify: Ensure time synchronization is restarted
 
-- name: Ensure unattended-upgrades is installed
+- name: Ensure unattended upgrades are installed
   ansible.builtin.apt:
     name: unattended-upgrades
     state: present
-  tags: base
 
-- name: Enable automatic security updates
+- name: Configure automatic security updates
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/20auto-upgrades
     owner: root
@@ -74,24 +66,13 @@
       APT::Periodic::Update-Package-Lists "1";
       APT::Periodic::Unattended-Upgrade "1";
       APT::Periodic::AutocleanInterval "7";
-  tags: base
 
-- name: Apply pending base restarts
+- name: Ensure base service restarts are applied
   ansible.builtin.meta: flush_handlers
-  tags: base
 
-- name: Verify sshd is running and accepting connections
-  ansible.builtin.command:
-    cmd: ssh -o BatchMode=yes -o ConnectTimeout=3 localhost true
-  register: base_sshd_check
-  changed_when: false
-  failed_when: base_sshd_check.rc != 0 and base_sshd_check.rc != 255
-  tags: base
-
-- name: Verify timesyncd is synchronized
+- name: Verify time synchronization
   ansible.builtin.command:
     cmd: timedatectl show --property=NTPSynchronized
   register: base_ntp_sync
   changed_when: false
   failed_when: "'yes' not in base_ntp_sync.stdout"
-  tags: base

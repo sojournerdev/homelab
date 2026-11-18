@@ -1,5 +1,5 @@
 ---
-- name: Restart K3s service
+- name: Ensure K3s service is restarted
   ansible.builtin.systemd:
     name: k3s
     state: restarted

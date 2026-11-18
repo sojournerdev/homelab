@@ -12,11 +12,9 @@ base_packages:
   - iotop
   - tmux
   - git
-  - net-tools
   - iputils-ping
   - dnsutils
   - ethtool
-  - apt-transport-https
 
 base_ssh_port: 22
 base_ssh_permit_root_login: "no"
