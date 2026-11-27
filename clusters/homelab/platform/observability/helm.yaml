@@ -1,0 +1,43 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus-community
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://prometheus-community.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus
+  namespace: flux-system
+spec:
+  interval: 10m
+  releaseName: prometheus
+  targetNamespace: prometheus
+  storageNamespace: prometheus
+  install:
+    crds: CreateReplace
+    createNamespace: true
+  upgrade:
+    crds: CreateReplace
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "94.2.0"
+      interval: 1h
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+  values:
+    defaultRules:
+      create: false
+    grafana:
+      defaultDashboardsEnabled: false
+    prometheus:
+      prometheusSpec:
+        serviceMonitorSelectorNilUsesHelmValues: false
+        serviceMonitorSelector:
+          matchLabels:
+            observability.sojournerdev.com/scrape: "true"

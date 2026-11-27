@@ -1,7 +1,0 @@
-server:
-  extraScrapeConfigs: |
-    - job_name: zot
-      static_configs:
-        - targets:
-            - zot.zot.svc.cluster.local:5000
-      metrics_path: /metrics
